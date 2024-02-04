@@ -8,6 +8,8 @@ on:
       - reopened
       - synchronize
       - closed
+    branches:
+      - 'main'
 
 permissions: write-all
 
@@ -16,5 +18,40 @@ jobs:
   deploy-preview:
     runs-on: ubuntu-latest
     steps:
-      - run: | 
-          echo "1111"
+      - uses: actions/checkout@v3
+        with:
+          ref: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 0
+      - run: echo github.event.action #npm i && npm run build
+        if: github.event.action != 'closed'
+
+      - name: Extract PR details
+        id: pr
+        run: |
+          PR_ID=pr-${{ github.event.pull_request.number }}
+          PREVIEW_PATH=previews/${PR_ID}
+          echo "::set-output name=PR_ID::${PR_ID}"
+
+      - name: Commit files
+        run: | 
+          git remote -v 
+          git config user.name "GitHub Actions"
+          git config user.email noreply@github.com
+          echo abc > abc
+          git add -A
+          git commit -am "update"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+#      - uses: rossjrw/pr-preview-action@v1
+#        with:
+#          source-dir: .
+#          preview-branch: gh-pages
+#          umbrella-dir: pr-preview
+#          action: auto
+
