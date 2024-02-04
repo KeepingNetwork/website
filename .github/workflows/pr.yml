@@ -20,12 +20,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
 
       - name: "Upload generated content"
         uses: actions/upload-artifact@v2
         with:
           name: site
           if-no-files-found: error
+          path: .
 
   deploy-preview:
     runs-on: ubuntu-latest
