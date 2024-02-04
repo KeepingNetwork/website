@@ -16,5 +16,5 @@ jobs:
   deploy-preview:
     runs-on: ubuntu-latest
     steps:
-      run: | 
-        echo "1111"
+      - run: | 
+          echo "1111"
