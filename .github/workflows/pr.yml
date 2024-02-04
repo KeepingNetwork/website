@@ -7,7 +7,6 @@ on:
       - opened
       - reopened
       - synchronize
-      - closed
     branches:
       - 'main'
 
@@ -15,6 +14,19 @@ permissions: write-all
 
 
 jobs:
+  test-deploy:
+    name: Test deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: "Upload generated content"
+        uses: actions/upload-artifact@v2
+        with:
+          name: site
+          if-no-files-found: error
+
   deploy-preview:
     runs-on: ubuntu-latest
     steps:
@@ -34,23 +46,84 @@ jobs:
           PREVIEW_PATH=previews/${PR_ID}
           echo "::set-output name=PR_ID::${PR_ID}"
 
-      - name: Commit files
-        run: | 
-          git remote -v 
+      - name: "Remove preview build directory"
+        run: rm -rf ${{ steps.pr.outputs.PR_ID }}
+      - name: "Create preview build directory"
+        run: mkdir -p ${{ steps.pr.outputs.PR_ID }}
+      - name: "Download generated content"
+        uses: actions/download-artifact@v2
+        with:
+          name: site
+          path: ${{ steps.pr.outputs.PR_ID }}
+
+      - name: PR preview details
+        run:
+          echo "you can preview the PR at https://starknet-io.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/"
+
+      - name: "Commit changes"
+        run: |
+          set -euo pipefail
+
+          # Debug information
+          echo "Current directory: $(pwd)"
+          echo "Contents of the repository:"
+          ls -al
+          echo "Git status:"
+          git status
+          
           git config user.name "GitHub Actions"
           git config user.email noreply@github.com
-          echo abc > abc
-          git add -A
-          git commit -am "update"
+          git add .
+          
+          
+          if ! git diff-index --quiet HEAD --; then
+            # Debug information
+            echo "Changes detected. Committing and pushing changes."
 
-          git push --set-upstream origin gh-pages
+            commit_message="Adding or updating preview build for PR ${{ steps.pr.outputs.PR_ID }}"
+          
+            # Debug message
+            echo "Commit message: $commit_message"
+          
+            # Commit changes
+            git commit -m "$commit_message"
+          
+            # Check if commit was successful
+            if [ $? -eq 0 ]; then
+              # Debug information
+              echo "Commit successful. Pushing changes."
+          
+              # Push changes
+              git push --set-upstream origin gh-pages
+          
+              # Check if push was successful
+              if [ $? -eq 0 ]; then
+                # Debug information
+                echo "Push successful."
+              else
+                # Debug information
+                echo "Error: Push failed."
+              fi
+            else
+              # Debug information
+              echo "Error: Commit failed."
+            fi
+          else
+            # Debug information
+            echo "No changes found."
+          fi
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-          #      - name: Push changes
-          #        uses: ad-m/github-push-action@master
-          #        with:
-          #          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Send comment to PR"
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          echo "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://starknet-io.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/ ." >/tmp/comment
+          gh pr comment ${{ github.event.pull_request.number }} -F /tmp/comment
+        env:
+          # USER_TOKEN: "${{ secrets.USER_TOKEN }}"
+          GH_TOKEN: "${{ github.token }}"
 
 #      - uses: rossjrw/pr-preview-action@v1
 #        with:
