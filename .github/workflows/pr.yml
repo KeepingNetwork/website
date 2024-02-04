@@ -2,15 +2,6 @@
 name: Deploy PR previews
 concurrency: preview-${{ github.ref }}
 on:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - closed
-    branches:
-      - 'main'
-
   pull_request_target:
     types:
       - opened
@@ -35,6 +26,13 @@ jobs:
           fetch-depth: 0
       - run: echo github.event.action #npm i && npm run build
         if: github.event.action != 'closed'
+
+      - name: Extract PR details
+        id: pr
+        run: |
+          PR_ID=pr-${{ github.event.pull_request.number }}
+          PREVIEW_PATH=previews/${PR_ID}
+          echo "::set-output name=PR_ID::${PR_ID}"
 
       - name: Commit files
         run: | 
