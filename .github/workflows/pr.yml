@@ -22,8 +22,8 @@ jobs:
         with:
           ref: gh-pages
           token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: false
-          fetch-depth: 0
+          #persist-credentials: false
+          #fetch-depth: 0
       - run: echo github.event.action #npm i && npm run build
         if: github.event.action != 'closed'
 
@@ -44,6 +44,8 @@ jobs:
           git commit -am "update"
 
           git push --set-upstream origin gh-pages
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
           #      - name: Push changes
           #        uses: ad-m/github-push-action@master
