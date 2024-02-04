@@ -2,6 +2,15 @@
 name: Deploy PR previews
 concurrency: preview-${{ github.ref }}
 on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+    branches:
+      - 'main'
+
   pull_request_target:
     types:
       - opened
@@ -11,7 +20,7 @@ on:
     branches:
       - 'main'
 
-#permissions: write-all
+permissions: write-all
 
 
 jobs:
@@ -19,12 +28,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 0
       - run: echo github.event.action #npm i && npm run build
         if: github.event.action != 'closed'
-      - uses: rossjrw/pr-preview-action@v1
+
+      - name: Commit files
+        run: | 
+          git remote -v 
+          git config user.name "GitHub Actions"
+          git config user.email noreply@github.com
+          echo abc > abc
+          git add -A
+          git commit -am "update"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
         with:
-          source-dir: .
-          preview-branch: gh-pages
-          umbrella-dir: pr-preview
-          action: auto
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+#      - uses: rossjrw/pr-preview-action@v1
+#        with:
+#          source-dir: .
+#          preview-branch: gh-pages
+#          umbrella-dir: pr-preview
+#          action: auto
 
